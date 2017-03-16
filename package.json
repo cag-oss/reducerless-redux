@@ -1,0 +1,33 @@
+{
+  "name": "reducerless-redux",
+  "version": "1.0.0",
+  "description": "redux without reducers",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "npm test -- --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/arthurgallo/reducerless-redux.git"
+  },
+  "keywords": [
+    "react",
+    "redux"
+  ],
+  "author": "Chris Gallo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/arthurgallo/reducerless-redux/issues"
+  },
+  "homepage": "https://github.com/arthurgallo/reducerless-redux#readme",
+  "devDependencies": {
+    "babel-cli": "^6.24.0",
+    "babel-jest": "^19.0.0",
+    "babel-preset-env": "^1.2.2",
+    "fetch-mock": "^5.9.4",
+    "jest": "^19.0.2",
+    "redux": "^3.6.0",
+    "whatwg-fetch": "^2.0.3"
+  }
+}
