@@ -27,6 +27,7 @@
     "babel-preset-env": "^1.2.2",
     "fetch-mock": "^5.9.4",
     "jest": "^19.0.2",
+    "object-path-immutable": "^0.5.1",
     "redux": "^3.6.0",
     "whatwg-fetch": "^2.0.3"
   }
