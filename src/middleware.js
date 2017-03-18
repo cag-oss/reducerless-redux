@@ -1,12 +1,15 @@
 import PromiseState from './PromiseState';
+const type = 'REDUCERLESS';
 
-const middleware = store => next => action => {
+const defaultSetKey = (state, key, value) => Object.assign({}, state, { [key]: value });
+
+const middleware = (props = {}) => store => next => action => {
   const makeAction = (key, value) => ({
+    type,
     key,
     value,
-    setKey: (state, key, value) => Object.assign({}, state, { [key]: value }),
+    setKey: props.setKey || defaultSetKey, 
   });
-  console.log('here:', store, next, action);
   
   return new Promise((resolve, reject) => {
     next(makeAction(action.key, PromiseState.create())); 

@@ -9,16 +9,18 @@ function reduce(state = {}, action) {
   if (isReducerlessAction(action)) {
     return action.setKey(state, action.key, action.value)
   }
+  return state;
 }
-function reducerEnhancer(rootReducer = _ => ({})) {
+function reducerEnhancer(rootReducer) {
   return function (state, action) {
-    return Object.assign({}, rootReducer(state, action), reduce(state, action));
+    return Object.assign({}, rootReducer && rootReducer(state, action), reduce(state, action));
   }
 }
 function storeEnhancer() {
   return function (createStore) {
-    return function (reducer, preloadedState) {
-      return createStore(reducerEnhancer(reducer), preloadedState);
+    return function (reducer, preloadedState, enhancer) {
+      const store = createStore(reducerEnhancer(reducer), preloadedState, enhancer); 
+      return store;
     }
   }
 }
