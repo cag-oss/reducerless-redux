@@ -28,7 +28,10 @@ fetchMock.get('/api/foos', [
 ]);
 fetchMock.get('/api/foo/1', {
   name: 'foo1', details: 'my details'
-}) 
+});
+fetchMock.post('/api/foo', (url, opts) => {
+  return opts.body;
+});
 
 test('fetch data and store in simple key', () => {
   const prom = store.dispatch({
@@ -53,20 +56,53 @@ test('fetch data and store in complex key', () => {
 });
 
 test('can specify update function that returns updated state', () => {
-  const prom = store.dispatch({
-    update: state => im.set(state, 'hello', 'kitty'),
+  store.dispatch({
+    update: state => im.set(state, ['hello'], 'kitty'),
   });
   expect(store.getState().hello).toBe('kitty');
 });
 
 test('can specify a transform on the action', () => {
-
-});
-
-test('call onFulfilled with response and dipatch', () => {
-
+  return store.dispatch({
+    key: 'foo',
+    url: '/api/foo/1',
+    transform: data => {
+      data.details = 'no details';
+      return data;
+    } 
+  })
+  .then(result => {
+    expect(store.getState().foo.value).toEqual({ name: 'foo1', details: 'no details' });
+  })
 });
 
 test('can supply http method on action', () => {
+  return store.dispatch({
+    key: 'addFooResp',
+    url: '/api/foo',
+    method: 'POST',
+    body: { name: 'newFoo' },
+  })
+  .then(_ => {
+    expect(store.getState().addFooResp.value).toEqual({ name: 'newFoo' });
+  });
+});
 
+test('call onFulfilled with response and dipatch', (done) => {
+  store.dispatch({
+    key: 'addFooResp',
+    url: '/api/foo',
+    method: 'POST',
+    body: { name: 'newFoo' },
+    onFulfilled: (data, dispatch) => {
+      //expect(data).toEqual({ name: 'newFoo' });
+      //expect(dispatch).toBe(store.dispatch);
+      dispatch({
+        update: state => im.set(state, 'hello', 'kitty'),
+      });
+      expect(store.getState().hello).toBe('kitty');
+      expect(store.getState().addFooResp.value).toEqual({ name: 'newFoo' });
+      done();
+    }
+  });
 });

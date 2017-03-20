@@ -1,13 +1,17 @@
+import { type } from './common';
 
 function isReducerlessAction(action) {
-  if (action.key !== undefined) {
+  if (action.type === type) {
     return true;
   }
   return false;
 }
 function reduce(state = {}, action) {
   if (isReducerlessAction(action)) {
-    return action.setKey(state, action.key, action.value)
+    if (action.update) {
+      return action.update(state);
+    }
+    return action.setKey(state, action.key, action.value);
   }
   return state;
 }
