@@ -23,11 +23,21 @@ const middleware = (props = {}) => store => next => action => {
     const opts = {
       method: action.method || 'GET',
       body: action.body,
-    } 
-    fetch(action.url, opts)
-    .then(res => res.json())
+    };
+    
+    fetch(action.url, props.getOpts ? props.getOpts(opts) : opts)
+    .then(res => {
+      if (res.ok) {
+        return action.handleResponse ? action.handleResponse(res) : res.json();
+      } else {
+        const error = new Error(res.statusText);
+        error.response = res;
+        throw error;
+      }
+    })
     .then(json => {
       const result = action.transform ? action.transform(json) : json;
+      
       const ps = PromiseState.resolve(result)
       next(makeAction(action.key, ps));
       if (action.onFulfilled) {

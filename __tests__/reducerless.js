@@ -12,9 +12,12 @@ beforeEach(() => {
     compose(
       applyMiddleware(
         reducerlessMiddleware({
-          setKey: (state, key, value) => im.set(state, key, value)
+          setKey: (state, key, value) => im.set(state, key, value),
+          getOpts: opts => {
+            opts.headers = { 'X-Api-Token': 'token' };
+            return opts;
+          },
         })
-        //reducerlessMiddleware()
       ),
       reducerlessEnhancer(),
     ),
@@ -32,6 +35,11 @@ fetchMock.get('/api/foo/1', {
 fetchMock.post('/api/foo', (url, opts) => {
   return opts.body;
 });
+fetchMock.post('/api/opts', (url, opts) => {
+  return { body: { headers: opts.headers } };
+});
+fetchMock.get('/api/err', { status: 500 });
+fetchMock.get('/api/test', { foo: 'bar' });
 
 test('fetch data and store in simple key', () => {
   const prom = store.dispatch({
@@ -105,4 +113,39 @@ test('call onFulfilled with response and dipatch', (done) => {
       done();
     }
   });
+});
+
+test('customize request options with getOptions()', () => {
+  return store.dispatch({
+    key: 'postResp',
+    url: '/api/opts',
+    method: 'POST',
+  })
+  .then(result => { 
+    expect(store.getState().postResp.value.headers).toEqual({ 'X-Api-Token': 'token' });
+  });
+});
+
+test('handles http errors', (done) => {
+  store.dispatch({
+    key: 'foos',
+    url: '/api/err',
+  })
+  .catch(err => {
+    expect(err.reason.response.status).toBe(500);
+    done();
+  })
+});
+
+test('can override default response handling on a per action level', () => {
+  return store.dispatch({
+    key: 'foos',
+    url: '/api/test',
+    handleResponse: response => {
+      return response.text();
+    }
+  })
+  .then(result => {
+    expect(store.getState().foos.value).toEqual(JSON.stringify({ foo: 'bar' })); 
+  })
 });
