@@ -2,10 +2,13 @@
   "name": "reducerless-redux",
   "version": "1.0.0",
   "description": "redux without reducers",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
     "test": "jest",
-    "test:watch": "npm test -- --watch"
+    "test:watch": "npm test -- --watch",
+    "build": "babel src --out-dir lib",
+    "clean": "rm -rf lib",
+    "prepublish": "npm run clean & npm run build"
   },
   "repository": {
     "type": "git",
