@@ -4,6 +4,10 @@ import { type } from './common';
 const defaultSetKey = (state, key, value) => Object.assign({}, state, { [key]: value });
 
 const middleware = (props = {}) => store => next => action => {
+  if (action.type && action.type !== type) {
+    next(action);
+    return;
+  }
   if (action.update && typeof action.update === 'function') {
     next({
       type,
