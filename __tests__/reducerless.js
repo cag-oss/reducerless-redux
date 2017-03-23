@@ -3,9 +3,11 @@ import 'whatwg-fetch';
 import fetchMock from 'fetch-mock';
 import { reducerlessMiddleware, reducerlessEnhancer } from '../src';
 import im from 'object-path-immutable';
+import lolex from 'lolex';
 
 let store;
 beforeEach(() => {
+  fetchMock.reset();
   store = createStore(
     null,
     null,
@@ -24,6 +26,8 @@ beforeEach(() => {
   );
 
 });
+
+afterAll(fetchMock.restore);
 
 fetchMock.get('/api/foos', [
   { name: 'foo1' },
@@ -148,4 +152,41 @@ test('can override default response handling on a per action level', () => {
   .then(result => {
     expect(store.getState().foos.value).toEqual(JSON.stringify({ foo: 'bar' })); 
   })
+});
+jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
+test.only('can repeat an action on a predefined interval', (done) => {
+  jest.useFakeTimers();
+  const test = require('../src/timertest');
+  test();
+  jest.runOnlyPendingTimers();
+  console.log('start');
+  // setTimeout(() => {
+  //   console.log('outer');
+  //   setTimeout(() => {
+  //     console.log('inner');
+      
+  //   }, 10000);
+  // }, 1000);
+  //jest.runOnlyPendingTimers();
+  //const clock = lolex.install();
+  // store.dispatch({
+  //   key: 'foos',
+  //   url: '/api/foos',
+  //   refreshInterval: 5000,
+  //   onRefresh: () => {
+  //     //Promise.resolve().then(_ => jest.runAllTimers());
+  //     //jest.runOnlyPendingTimers();
+  //     console.log('--onRefresh', fetchMock.calls('/api/foos').length);
+  //   },
+  // })
+  // .then(result => {
+  //   //jest.runOnlyPendingTimers();
+  // })
+  //jest.runAllTimers(); 
+//  jest.runTimersToTime(10000);
+//jest.runAllTimers();
+  //console.log('here', fetchMock.calls('/api/foos').length, setTimeout.mock.calls.length);
+  // setTimeout(() => {
+  //   done();
+  // }, 5000); 
 });
