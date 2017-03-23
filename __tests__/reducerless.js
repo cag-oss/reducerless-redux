@@ -206,3 +206,17 @@ test('multiple dispatches of a repeating action will not fetch the url again', (
   }, 100);
 });
 
+test('do not fetch (GET) a url that is pending fetch', (done) => {
+  store.dispatch({
+    key: 'foos',
+    url: '/api/foos',
+  });
+  store.dispatch({
+    key: 'foos',
+    url: '/api/foos',
+  })
+  .then(result => {
+    expect(result).toEqual({ pending: true });
+    done();
+  });
+});

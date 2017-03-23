@@ -39,7 +39,11 @@ const retry = (action, props) => {
   });
 }
 
+const isGet = a => !a.method || a.method.toUpperCase() === 'GET'
+
 const middleware = (props = {}) => store => next => action => {
+  if (!store._refreshing) store._refreshing = {};
+  if (!store._pending) store._pending = {};
   if (action.type && action.type !== type) {
     next(action);
     return;
@@ -57,15 +61,20 @@ const middleware = (props = {}) => store => next => action => {
     value,
     setKey: props.setKey || defaultSetKey, 
   });
-  if (repeating[action.url] && !action._refreshing) {
+  if (store._refreshing[action.url] && !action._refreshing) {
     return Promise.resolve({ refreshing: true });
   }
+  if (isGet(action) && store._pending[action.url]) {
+    return Promise.resolve({ pending: true });
+  }
   if (action.refreshInterval) {
-    repeating[action.url] = true;
+    store._refreshing[action.url] = true;
   }
   return new Promise((resolve, reject) => {
     next(makeAction(action.key, PromiseState.create()));
-     
+    if (isGet(action)) {
+      store._pending[action.url] = true;
+    } 
     retry(action, props) 
     .then(json => {
       const result = action.transform ? action.transform(json) : json;
@@ -75,8 +84,9 @@ const middleware = (props = {}) => store => next => action => {
       if (action.onFulfilled) {
         action.onFulfilled(ps, store.dispatch);
       }
+      delete store._pending[action.url];
       resolve(ps);
-      if (action.refreshInterval && repeating[action.url]) {
+      if (action.refreshInterval && store._refreshing[action.url]) {
         const newAction = Object.assign({}, action, { _refreshing: true });
         setTimeout(() => {
           store.dispatch(newAction)
@@ -84,7 +94,8 @@ const middleware = (props = {}) => store => next => action => {
       }
     })
     .catch(err => {
-      delete repeating[action.url];
+      delete store._refreshing[action.url];
+      delete store._pending[action.url];
       const ps = PromiseState.reject(err)
       next(makeAction(action.key, ps));
       reject(ps);
