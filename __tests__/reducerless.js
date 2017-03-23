@@ -6,6 +6,7 @@ import im from 'object-path-immutable';
 import lolex from 'lolex';
 
 let store;
+let numRetryCalled;
 beforeEach(() => {
   fetchMock.reset();
   store = createStore(
@@ -24,7 +25,7 @@ beforeEach(() => {
       reducerlessEnhancer(),
     ),
   );
-
+  numRetryCalled = 0;
 });
 
 afterAll(fetchMock.restore);
@@ -44,6 +45,13 @@ fetchMock.post('/api/opts', (url, opts) => {
 });
 fetchMock.get('/api/err', { status: 500 });
 fetchMock.get('/api/test', { foo: 'bar' });
+fetchMock.get('/api/retry', (url, opts) => {
+  if (numRetryCalled < 2) {
+    numRetryCalled += 1;
+    return { status: 500 };
+  }
+  return { foo: 'bar' };
+});
 
 test('fetch data and store in simple key', () => {
   const prom = store.dispatch({
@@ -153,40 +161,34 @@ test('can override default response handling on a per action level', () => {
     expect(store.getState().foos.value).toEqual(JSON.stringify({ foo: 'bar' })); 
   })
 });
-jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
-test.only('can repeat an action on a predefined interval', (done) => {
-  jest.useFakeTimers();
-  const test = require('../src/timertest');
-  test();
-  jest.runOnlyPendingTimers();
-  console.log('start');
-  // setTimeout(() => {
-  //   console.log('outer');
-  //   setTimeout(() => {
-  //     console.log('inner');
-      
-  //   }, 10000);
-  // }, 1000);
-  //jest.runOnlyPendingTimers();
-  //const clock = lolex.install();
-  // store.dispatch({
-  //   key: 'foos',
-  //   url: '/api/foos',
-  //   refreshInterval: 5000,
-  //   onRefresh: () => {
-  //     //Promise.resolve().then(_ => jest.runAllTimers());
-  //     //jest.runOnlyPendingTimers();
-  //     console.log('--onRefresh', fetchMock.calls('/api/foos').length);
-  //   },
-  // })
-  // .then(result => {
-  //   //jest.runOnlyPendingTimers();
-  // })
-  //jest.runAllTimers(); 
-//  jest.runTimersToTime(10000);
-//jest.runAllTimers();
-  //console.log('here', fetchMock.calls('/api/foos').length, setTimeout.mock.calls.length);
-  // setTimeout(() => {
-  //   done();
-  // }, 5000); 
+
+test('can repeat an action on a predefined interval', (done) => {
+  store.dispatch({
+    key: 'foos',
+    url: '/api/foos',
+    refreshInterval: 1,
+  });
+  setTimeout(() => {
+    const calls = fetchMock.calls('/api/foos').length;
+    expect(calls).toBeGreaterThan(5);
+    done(); 
+  }, 200);
+
+});
+
+test('can retry an action based on action.maxRetry', () => {
+  return store.dispatch({
+    key: 'foos',
+    url: '/api/retry',
+    maxRetry: 3,
+    retryBackoff: 1
+  })
+  .then(result => {
+    const expected = store.getState().foos.value;
+    expect(expected).toEqual({ foo: 'bar' });    
+  });
+});
+
+test('combine maxRetry and refreshInterval', (done) => {
+  done();
 });

@@ -3,9 +3,41 @@ import { type } from './common';
 
 const defaultSetKey = (state, key, value) => Object.assign({}, state, { [key]: value });
 
+const retry = (action, props) => {
+  // retry algorithm credit: alalonde/retry-promise
+  const max = action.maxRetry || 1;
+  const backoff = action.retryBackoff || 1000;
+
+  return new Promise((resolve, reject) => {
+    const attempt = i => {
+      const opts = {
+        method: action.method || 'GET',
+        body: action.body,
+      };
+      const finalOpts = props.getOpts ? props.getOpts(opts) : opts;
+      fetch(action.url, finalOpts) 
+      .then(res => {
+        if (res.ok) {
+          return action.handleResponse ? action.handleResponse(res) : res.json();
+        } else {
+          const error = new Error(res.statusText);
+          error.response = res;
+          throw error;
+        }
+      })
+      .then(resolve)
+      .catch(err => {
+        if (i >= max) {
+          reject(err);
+        }
+        setTimeout(() => attempt(i + 1) , i * backoff);
+      })
+    }
+    attempt(1);
+  });
+}
+
 const middleware = (props = {}) => store => next => action => {
-  console.log('got action', action);
-  
   if (action.type && action.type !== type) {
     next(action);
     return;
@@ -26,24 +58,8 @@ const middleware = (props = {}) => store => next => action => {
 
   return new Promise((resolve, reject) => {
     next(makeAction(action.key, PromiseState.create()));
-    const opts = {
-      method: action.method || 'GET',
-      body: action.body,
-    };
-    console.log('about to fetch');
      
-    fetch(action.url, props.getOpts ? props.getOpts(opts) : opts)
-    .then(res => {
-      console.log('result');
-      
-      if (res.ok) {
-        return action.handleResponse ? action.handleResponse(res) : res.json();
-      } else {
-        const error = new Error(res.statusText);
-        error.response = res;
-        throw error;
-      }
-    })
+    retry(action, props) 
     .then(json => {
       const result = action.transform ? action.transform(json) : json;
       
@@ -54,21 +70,9 @@ const middleware = (props = {}) => store => next => action => {
       }
       resolve(ps);
       if (action.refreshInterval) {
-        console.log('making timeout');
-        
         setTimeout(() => {
-          console.log('refreshing', action);
           store.dispatch(action)
-          .then(_ => {
-            console.log('in prom');
-            
-            //jest.runOnlyPendingTimers();
-          });
-        }, 1000);
-       //jest.runOnlyPendingTimers();
-       //console.log('here', setTimeout.mock.calls.length);
-       
-        action.onRefresh && action.onRefresh(); 
+        }, action.refreshInterval);
       }
     })
     .catch(err => {
