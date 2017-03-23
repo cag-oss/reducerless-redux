@@ -3,7 +3,6 @@ import 'whatwg-fetch';
 import fetchMock from 'fetch-mock';
 import { reducerlessMiddleware, reducerlessEnhancer } from '../src';
 import im from 'object-path-immutable';
-import lolex from 'lolex';
 
 let store;
 let numRetryCalled;
@@ -189,6 +188,21 @@ test('can retry an action based on action.maxRetry', () => {
   });
 });
 
-test('combine maxRetry and refreshInterval', (done) => {
-  done();
+test('multiple dispatches of a repeating action will not fetch the url again', (done) => {
+  store.dispatch({
+    key: 'foos',
+    url: '/api/foos',
+    refreshInterval: 1,
+  });
+  setTimeout(() => {
+    store.dispatch({
+      key: 'foos',
+      url: '/api/foos',
+    })
+    .then(result => {
+      expect(result).toEqual({ refreshing: true });
+      done();
+    })
+  }, 100);
 });
+

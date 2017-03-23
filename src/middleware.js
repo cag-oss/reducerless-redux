@@ -3,6 +3,8 @@ import { type } from './common';
 
 const defaultSetKey = (state, key, value) => Object.assign({}, state, { [key]: value });
 
+const repeating = {};
+
 const retry = (action, props) => {
   // retry algorithm credit: alalonde/retry-promise
   const max = action.maxRetry || 1;
@@ -55,7 +57,12 @@ const middleware = (props = {}) => store => next => action => {
     value,
     setKey: props.setKey || defaultSetKey, 
   });
-
+  if (repeating[action.url] && !action._refreshing) {
+    return Promise.resolve({ refreshing: true });
+  }
+  if (action.refreshInterval) {
+    repeating[action.url] = true;
+  }
   return new Promise((resolve, reject) => {
     next(makeAction(action.key, PromiseState.create()));
      
@@ -69,13 +76,15 @@ const middleware = (props = {}) => store => next => action => {
         action.onFulfilled(ps, store.dispatch);
       }
       resolve(ps);
-      if (action.refreshInterval) {
+      if (action.refreshInterval && repeating[action.url]) {
+        const newAction = Object.assign({}, action, { _refreshing: true });
         setTimeout(() => {
-          store.dispatch(action)
+          store.dispatch(newAction)
         }, action.refreshInterval);
       }
     })
     .catch(err => {
+      delete repeating[action.url];
       const ps = PromiseState.reject(err)
       next(makeAction(action.key, ps));
       reject(ps);
