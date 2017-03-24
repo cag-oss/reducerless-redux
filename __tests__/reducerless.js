@@ -51,6 +51,7 @@ fetchMock.get('/api/retry', (url, opts) => {
   }
   return { foo: 'bar' };
 });
+fetchMock.get('/api/bars', []);
 
 test('fetch data and store in simple key', () => {
   const prom = store.dispatch({
@@ -219,4 +220,26 @@ test('do not fetch (GET) a url that is pending fetch', (done) => {
     expect(result).toEqual({ pending: true });
     done();
   });
+});
+
+test('can clear auto refreshing actions', (done) => {
+  const url = '/api/bars'; 
+  console.log('calls', fetchMock.calls(url).length);
+  store.dispatch({
+    key: 'foos',
+    url: url,
+    refreshInterval: 1,
+  });
+  setTimeout(() => {
+    store.dispatch({
+      clearRefresh: true,
+    });
+    const callsNow = fetchMock.calls(url).length;
+    setTimeout(() => {
+      const callsLater = fetchMock.calls(url).length;
+      expect(callsNow).toBe(callsLater);
+      done();
+    }, 100);
+    
+  }, 100)
 });

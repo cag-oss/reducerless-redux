@@ -48,6 +48,10 @@ const middleware = (props = {}) => store => next => action => {
     next(action);
     return;
   }
+  if(action.clearRefresh) {
+    store._refreshing = {};
+    return; 
+  }
   if (action.update && typeof action.update === 'function') {
     next({
       type,
@@ -89,7 +93,9 @@ const middleware = (props = {}) => store => next => action => {
       if (action.refreshInterval && store._refreshing[action.url]) {
         const newAction = Object.assign({}, action, { _refreshing: true });
         setTimeout(() => {
-          store.dispatch(newAction)
+          if(store._refreshing[action.url]) {
+            store.dispatch(newAction);
+          }
         }, action.refreshInterval);
       }
     })
