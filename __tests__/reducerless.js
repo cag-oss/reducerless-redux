@@ -240,6 +240,5 @@ test('can clear auto refreshing actions', (done) => {
       expect(callsNow).toBe(callsLater);
       done();
     }, 100);
-    
   }, 100)
 });
