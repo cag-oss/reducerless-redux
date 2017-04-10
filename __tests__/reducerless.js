@@ -242,3 +242,7 @@ test('can clear auto refreshing actions', (done) => {
     }, 100);
   }, 100)
 });
+
+test('can cache get requests for a specified period of time', () => {
+
+});
