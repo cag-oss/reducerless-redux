@@ -1,6 +1,6 @@
 Reducerless Redux
 ==================
-[brief description]
+Redux middleware for intuitively mapping urls to state
 
 ## Installation
 ```
