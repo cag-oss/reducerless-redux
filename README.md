@@ -42,10 +42,10 @@ const store = createStore(
         applyMiddleware(
         reducerlessMiddleware({
             setKey: (state, key, value) => im.set(state, key, value),
-            getKey: (state, key, value) => im.get(state, key, value),
+            getKey: (state, key, value) => im.get(state, key),
             getOpts: opts => {
-            opts.headers = { 'X-Api-Token': 'token' };
-            return opts;
+                opts.headers = { 'X-Api-Token': 'token' };
+                return opts;
             },
         })
         ),
@@ -59,7 +59,8 @@ render(
     </Provider>,
     document.getElementById('root')
 );
-
+```
+```jsx
 // App.js - use lifecycle methods
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
@@ -103,7 +104,8 @@ export default connect( (state, props) => {
         key: 'selectedFoo'
     })
 })(FoosPage);
-
+```
+```jsx
 // App.js - use recompose to automatically fetch and update
 import { compose, lifecycle } from 'recompose';
 
@@ -116,13 +118,13 @@ const FoosPage = ({ foos }) => {
         return (
             <div>
                 <FoosList foos={foos.value} />
-                <FooDetail />
+                <FooDetail ... />
             </div>
         );
     }
 }
 
-compose(
+export default compose(
     connect(
         // same as above
     ),
@@ -138,4 +140,82 @@ compose(
     }),
 )(FoosPage)
 ```
+## Middleware options
+```jsx
+{
+    // how do we map a key to state? This gives you flexibilty in what you set the 'key' property
+    // to in your actions (See action api below). Any function that can immutably update state 
+    // can work here, for example: updeep, dot-prop, or object-path-immutable
+    // This is optional, but the key can only be a single identifier if this isn't defined.
+    setKey: function (state, key, value) { }
 
+    // how do we get state from a key?
+    getKey: function (state, key, value) => { }
+
+    // modify fetch options for all requests. Return the modified options.
+    // Usefull for setting auth headers, etc.
+    getOpts: function (opts) { }
+}
+```
+
+## Action API
+```jsx
+{
+    // the url for the request. If this url is pending, it will not be fetched again.
+    url: '/api/foos'
+
+    // the key of our state in which to put the result of the http request.
+    // The result will be stored inside of a PromiseState. See react-refetch for
+    // more documentation about PromiseStates.
+    // Will be used by the 'setKey' function (see above) defined in the middleware
+    key: ['path', 'to' , 'prop']
+
+    // synchronously update state however you want.
+    // Meant to be used on its own without url or key.
+    update: function (state) => im.set(state, ['hello'], 'kitty')
+
+    // transform the result of a request. Return the transformed result
+    transform: data => {
+        data.myprop = 'hello';
+        return data;
+    }
+
+    // http method
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' // etc.
+
+    // body of request
+    body: { ... }
+
+    // do other stuff when the request is fulfilled
+    onFulfilled: (data, dispatch) => {
+        // update a piece of state with the result
+        dispatch({
+            update: state => im.set(state, 'selectedFoo', data);
+        })
+        // or re-fetch a piece of state
+        dispatch({
+            url: `/api/foo/${data.id}`,
+            key: 'foo'
+        });
+    }
+
+    // override how the response itself is handled. Default is response.json()
+    handleResponse: response => response.text()
+
+    // poll the url at the given interval.
+    // Any actions that specify the same url as this one will not be fetched
+    // while this action is in the refresh queue
+    refreshInterval: 5000 // every 5 seconds
+
+    // clear all polling actions
+    clearRefresh: true
+
+    // retry an action with the given backoff
+    maxRetry: 3 // retry 3 times, then dispatch the error from the last failed attempt
+    retryBackoff: 1000 // wait for this long before trying again: attempt number * 1000
+
+    // cache an key-url combination for the specified ammount of time.
+    cacheFor: 1000 * 60 * 10 // don't fetch the action url if already fetched within 10 mins     
+    
+}
+```
